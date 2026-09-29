@@ -1,0 +1,33 @@
+{
+  "name": "pasticceria-ordini",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "seed": "node --no-warnings scripts/gen-seed.mjs"
+  },
+  "dependencies": {
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.4.0",
+    "@mui/material": "^9.4.0",
+    "@mui/material-nextjs": "^9.4.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "next": "16.3.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.7",
+    "typescript": "^5"
+  }
+}
