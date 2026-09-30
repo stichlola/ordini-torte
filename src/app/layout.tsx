@@ -1,16 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto, Dancing_Script } from "next/font/google";
+import { Jost, Playfair_Display, Dancing_Script } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
-import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 import { theme } from "@/theme";
 
-const roboto = Roboto({
-  weight: ["300", "400", "500", "700", "900"],
+const body = Jost({
+  weight: ["300", "400", "500", "600"],
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-roboto",
+  variable: "--font-body",
+});
+
+const display = Playfair_Display({
+  weight: ["400", "500", "600", "900"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display",
 });
 
 const script = Dancing_Script({
@@ -25,20 +31,16 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFF8F8" },
-    { media: "(prefers-color-scheme: dark)", color: "#191113" },
-  ],
+  themeColor: "#F9F6F0",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="it" className={`${roboto.variable} ${script.variable}`} suppressHydrationWarning>
+    <html lang="it" className={`${body.variable} ${display.variable} ${script.variable}`}>
       <body>
-        <InitColorSchemeScript attribute="class" />
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
-            <CssBaseline enableColorScheme />
+            <CssBaseline />
             {children}
           </ThemeProvider>
         </AppRouterCacheProvider>

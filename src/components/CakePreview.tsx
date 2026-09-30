@@ -16,6 +16,7 @@ type Pt = [number, number];
 const VIEW_W = 420;
 const VIEW_Y = 70;
 const VIEW_H = 340;
+const NEUTRAL = "#DDD5C8"; // parti non ancora scelte
 const K = 0.42; // inclinazione della vista
 const PLATE_Y = 322;
 
@@ -139,8 +140,9 @@ export default function CakePreview({ catalog, config, imageUrl }: Props) {
   const uid = useId().replace(/[:«»]/g, "");
 
   const scene = useMemo(() => {
-    const poly = shapePolygon(config.shape);
-    const sizeIdx = Math.max(0, catalog.sizes.findIndex((s) => s.id === config.size));
+    const poly = shapePolygon(config.shape ?? "rotonda");
+    // taglia non ancora scelta: disegno una misura media
+    const sizeIdx = config.size ? Math.max(0, catalog.sizes.findIndex((s) => s.id === config.size)) : 1;
     const tierCount = catalog.tiers.find((t) => t.id === config.tiers)?.tiers ?? 1;
     const widthFactor = config.shape === "rettangolare" ? 0.82 : 1;
     const R0 = (100 + sizeIdx * 13) * widthFactor;
@@ -157,10 +159,11 @@ export default function CakePreview({ catalog, config, imageUrl }: Props) {
     return { poly, tiers, R0 };
   }, [catalog, config.shape, config.size, config.tiers]);
 
-  const sponge = catalog.sponges.find((s) => s.id === config.sponge)?.color ?? "#F2D59A";
-  const filling = catalog.fillings.find((f) => f.id === config.filling)?.color ?? "#F7DF8B";
+  const sponge = catalog.sponges.find((s) => s.id === config.sponge)?.color ?? NEUTRAL;
+  const filling = catalog.fillings.find((f) => f.id === config.filling)?.color ?? shade(NEUTRAL, 0.35);
   const covering = catalog.coverings.find((c) => c.id === config.covering);
-  const kind = covering?.kind ?? "panna";
+  // senza copertura scelta si vedono gli strati, come in una naked cake
+  const kind = covering?.kind ?? "naked";
   const coverColor =
     kind === "naked"
       ? filling
@@ -431,8 +434,8 @@ export default function CakePreview({ catalog, config, imageUrl }: Props) {
             <image href={imageUrl} x={cx - w} y={cy - h * K} width={w * 2} height={h * 2 * K} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clipId})`} />
           ) : (
             <g clipPath={`url(#${clipId})`}>
-              <rect x={cx - w} y={cy - h * K} width={w * 2} height={h * 2 * K} fill="#E8DEF8" />
-              <text x={cx} y={cy + 4} textAnchor="middle" fontSize={12} fill="#6750A4" fontFamily="var(--font-roboto), sans-serif">
+              <rect x={cx - w} y={cy - h * K} width={w * 2} height={h * 2 * K} fill="#EFE6D3" />
+              <text x={cx} y={cy + 4} textAnchor="middle" fontSize={12} fill="#8C6D3B" fontFamily="var(--font-body), sans-serif">
                 la tua foto
               </text>
             </g>
@@ -470,7 +473,7 @@ export default function CakePreview({ catalog, config, imageUrl }: Props) {
     items.push({
       depth: centerV + 0.01,
       node: (
-        <g key="num" fontFamily="var(--font-roboto), sans-serif" fontWeight={900} fontSize={fs} textAnchor="middle">
+        <g key="num" fontFamily="var(--font-body), sans-serif" fontWeight={900} fontSize={fs} textAnchor="middle">
           <ellipse cx={cx} cy={cy} rx={fs * 0.3 * txt.length} ry={fs * 0.1} fill="rgba(0,0,0,0.18)" />
           {[6, 5, 4, 3, 2, 1].map((d) => (
             <text key={d} x={cx + d} y={cy - 2 + d * 0.5} fill={shade(base, -0.35)}>
@@ -531,16 +534,24 @@ export default function CakePreview({ catalog, config, imageUrl }: Props) {
         ))}
         <radialGradient id={`${uid}plate`} cx="0.5" cy="0.4" r="0.6">
           <stop offset="0" stopColor="#FFFFFF" />
-          <stop offset="1" stopColor="#D9D4DE" />
+          <stop offset="1" stopColor="#E2DACB" />
         </radialGradient>
       </defs>
 
       {/* alzatina */}
       <ellipse cx={VIEW_W / 2} cy={PLATE_Y + 10} rx={R0 * 1.18 + 14} ry={(R0 * 1.18 + 14) * K} fill="rgba(0,0,0,0.08)" />
-      <ellipse cx={VIEW_W / 2} cy={PLATE_Y} rx={R0 * 1.14 + 12} ry={(R0 * 1.14 + 12) * K} fill={`url(#${uid}plate)`} stroke="#C9C2D0" strokeWidth={1} />
+      <ellipse cx={VIEW_W / 2} cy={PLATE_Y} rx={R0 * 1.14 + 12} ry={(R0 * 1.14 + 12) * K} fill={`url(#${uid}plate)`} stroke="#D3C9B8" strokeWidth={1} />
 
-      {tierNodes}
-      <g>{items.map((it) => it.node)}</g>
+      {config.shape ? (
+        <>
+          {tierNodes}
+          <g>{items.map((it) => it.node)}</g>
+        </>
+      ) : (
+        <text x={VIEW_W / 2} y={VIEW_Y + VIEW_H / 2 - 20} textAnchor="middle" fontSize={17} fill="#8A7F73" fontFamily="var(--font-body), sans-serif">
+          Scegli la forma per iniziare
+        </text>
+      )}
     </svg>
   );
 }

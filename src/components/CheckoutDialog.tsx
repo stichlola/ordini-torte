@@ -140,7 +140,7 @@ export default function CheckoutDialog({ open, onClose, onDone, catalog, config,
                 <Divider sx={{ my: 1.5 }} />
                 <Stack direction="row" sx={{ justifyContent: "space-between" }}>
                   <Typography variant="subtitle1">Totale stimato</Typography>
-                  <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 700 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "secondary.dark" }}>
                     {formatEuro(total)}
                   </Typography>
                 </Stack>

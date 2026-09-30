@@ -35,7 +35,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import type { Catalog, ShapeId } from "@/lib/catalog";
-import { computePrice, defaultConfig, formatEuro, normalizeConfig, type CakeConfig } from "@/lib/order";
+import { computePrice, defaultConfig, formatEuro, missingChoices, normalizeConfig, type CakeConfig } from "@/lib/order";
 import CakePreview from "./CakePreview";
 import CheckoutDialog from "./CheckoutDialog";
 
@@ -81,9 +81,10 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
 
   const deltaLabel = (d: number) => (Math.abs(d) < 0.005 ? "incluso" : `${d > 0 ? "+" : "−"}${formatEuro(Math.abs(d))}`);
 
-  const shape = catalog.shapes.find((s) => s.id === config.shape)!;
-  const size = catalog.sizes.find((s) => s.id === config.size)!;
-  const covering = catalog.coverings.find((c) => c.id === config.covering)!;
+  const maxTiers = catalog.shapes.find((s) => s.id === config.shape)?.maxTiers ?? Infinity;
+  const sizeFactor = catalog.sizes.find((s) => s.id === config.size)?.factor ?? 1;
+  const covering = catalog.coverings.find((c) => c.id === config.covering);
+  const missing = missingChoices(config);
   const garnishFull = config.garnishes.length >= catalog.rules.maxGarnishes;
   const needsImage = config.topper.type === "image" && !image;
 
@@ -170,9 +171,9 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
               key={t.id}
               label={t.label}
               hint={t.extraServings || undefined}
-              price={config.tiers === t.id || t.tiers > shape.maxTiers ? undefined : deltaLabel(delta({ tiers: t.id }))}
+              price={config.tiers === t.id || t.tiers > maxTiers ? undefined : deltaLabel(delta({ tiers: t.id }))}
               selected={config.tiers === t.id}
-              disabled={t.tiers > shape.maxTiers}
+              disabled={t.tiers > maxTiers}
               onClick={() => update({ tiers: t.id })}
             />
           ))}
@@ -220,7 +221,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
             />
           ))}
         </ChipGroup>
-        {covering.colors.length > 0 && (
+        {covering && covering.colors.length > 0 && (
           <>
             <SubTitle>Colore</SubTitle>
             <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: "wrap" }}>
@@ -254,7 +255,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
                 key={g.id}
                 filter
                 label={g.label}
-                price={selected ? undefined : `+${formatEuro(g.price * size.factor)}`}
+                price={selected ? undefined : `+${formatEuro(g.price * sizeFactor)}`}
                 selected={selected}
                 disabled={!selected && garnishFull}
                 onClick={() =>
@@ -393,21 +394,25 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
     </Stack>
   );
 
+  const blocked = missing.length > 0 || needsImage;
+  const blockedHint = missing.length
+    ? `Da scegliere: ${missing.join(", ")}`
+    : needsImage
+      ? "Carica la foto da stampare"
+      : null;
+  const priceTitle = missing.length ? "Prezzo parziale" : "Prezzo stimato";
+
   const cta = (fullWidth: boolean) => (
-    <Tooltip title={needsImage ? "Carica la foto da stampare per continuare" : ""}>
-      <span>
-        <Button variant="contained" size="large" disabled={needsImage} onClick={() => setCheckoutOpen(true)} fullWidth={fullWidth}>
-          Continua
-        </Button>
-      </span>
-    </Tooltip>
+    <Button variant="contained" size="large" disabled={blocked} onClick={() => setCheckoutOpen(true)} fullWidth={fullWidth}>
+      Continua
+    </Button>
   );
 
   return (
     <Box sx={{ minHeight: "100dvh", bgcolor: "background.default", pb: { xs: 14, md: 6 } }}>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ bgcolor: "background.default", borderBottom: 1, borderColor: "divider" }}>
         <Toolbar>
-          <CakeIcon color="primary" sx={{ mr: 1.5 }} />
+          <CakeIcon sx={{ mr: 1.5, color: "secondary.main" }} />
           <Typography variant="h3" component="h1" sx={{ flexGrow: 1 }}>
             Componi la tua torta
           </Typography>
@@ -425,9 +430,10 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
       </AppBar>
 
       <Container maxWidth="lg" sx={{ pt: { xs: 0, md: 4 } }}>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 5fr) minmax(0, 6fr)" }, gap: { xs: 2, md: 4 }, alignItems: "start" }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 6fr) minmax(0, 5fr)" }, gap: { xs: 2, md: 4 }, alignItems: "start" }}>
           <Box
             sx={{
+              order: { xs: 0, md: 1 },
               position: "sticky",
               top: { xs: 56, sm: 64, md: 88 },
               zIndex: 2,
@@ -442,19 +448,24 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
                 {preview}
                 <Box sx={{ display: { xs: "none", md: "block" } }}>
                   <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "baseline", mt: 3, mb: 1.5 }}>
-                    <Typography variant="h3">Prezzo stimato</Typography>
-                    <Typography variant="h2" color="primary" sx={{ fontWeight: 700 }}>
+                    <Typography variant="h3">{priceTitle}</Typography>
+                    <Typography variant="h2" sx={{ fontWeight: 500, color: "secondary.dark" }}>
                       {formatEuro(price.total)}
                     </Typography>
                   </Stack>
                   {priceDetails}
                   <Divider sx={{ my: 2 }} />
                   {cta(true)}
+                  {blockedHint && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center", mt: 1 }}>
+                      {blockedHint}
+                    </Typography>
+                  )}
                 </Box>
               </CardContent>
             </Card>
           </Box>
-          {sections}
+          <Box sx={{ order: { xs: 1, md: 0 } }}>{sections}</Box>
         </Box>
       </Container>
 
@@ -480,14 +491,19 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
             <Box sx={{ flexGrow: 1, cursor: "pointer" }} onClick={() => setDetailsOpen((o) => !o)}>
               <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center" }}>
-                Prezzo stimato {detailsOpen ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
+                {priceTitle} {detailsOpen ? <ExpandMoreIcon fontSize="small" /> : <ExpandLessIcon fontSize="small" />}
               </Typography>
-              <Typography variant="h2" color="primary" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+              <Typography variant="h2" sx={{ fontWeight: 500, lineHeight: 1.1, color: "secondary.dark" }}>
                 {formatEuro(price.total)}
               </Typography>
             </Box>
             {cta(false)}
           </Stack>
+          {blockedHint && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+              {blockedHint}
+            </Typography>
+          )}
         </Paper>
 
       <CheckoutDialog

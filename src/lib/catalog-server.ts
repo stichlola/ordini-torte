@@ -2,7 +2,7 @@ import "server-only";
 import { catalogEntries, CATALOG_TEMPLATE, type Catalog } from "./catalog";
 import { getSupabaseAdmin } from "./supabase-server";
 
-interface CatalogRow {
+export interface CatalogRow {
   key: string;
   label: string;
   price: number;
@@ -27,7 +27,12 @@ export async function getCatalog(): Promise<Catalog> {
     .select("key,label,price,active,sort_order");
   if (error || !data) throw new CatalogError(`Lettura di catalog_items fallita: ${error?.message}`);
 
-  const rows = new Map((data as CatalogRow[]).map((r) => [r.key, r]));
+  return buildCatalog(data as CatalogRow[]);
+}
+
+/** Unisce la struttura definita nel codice con le righe di `catalog_items`. */
+export function buildCatalog(data: CatalogRow[]): Catalog {
+  const rows = new Map(data.map((r) => [r.key, r]));
   const template = structuredClone(CATALOG_TEMPLATE);
   for (const { key, item } of catalogEntries(template)) {
     const row = rows.get(key);

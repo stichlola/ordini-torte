@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { CatalogError, getCatalog } from "@/lib/catalog-server";
 import type { Catalog } from "@/lib/catalog";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
-import { computePrice, describeConfig, minPickupDate, normalizeConfig, type CakeConfig, type Customer } from "@/lib/order";
+import { computePrice, describeConfig, minPickupDate, missingChoices, normalizeConfig, type CakeConfig, type Customer } from "@/lib/order";
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // sotto il limite body di Vercel (4.5 MB)
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -39,6 +39,8 @@ export async function POST(request: Request) {
   }
   // Il server non si fida del client: rinormalizza e ricalcola il prezzo
   const config = normalizeConfig(catalog, rawConfig);
+  const missing = missingChoices(config);
+  if (missing.length) return bad(`Configurazione incompleta: manca ${missing.join(", ")}.`);
   const price = computePrice(catalog, config);
 
   const name = String(customer?.name ?? "").trim().slice(0, 120);

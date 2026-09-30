@@ -3,12 +3,13 @@ import type { Catalog, ShapeId } from "./catalog";
 export type TopperType = "none" | "image" | "model" | "number";
 
 export interface CakeConfig {
-  shape: ShapeId;
-  size: string;
-  tiers: string;
-  sponge: string;
-  filling: string;
-  covering: string;
+  // null = il cliente non ha ancora scelto
+  shape: ShapeId | null;
+  size: string | null;
+  tiers: string | null;
+  sponge: string | null;
+  filling: string | null;
+  covering: string | null;
   coveringColor: string | null;
   garnishes: string[];
   topper: {
@@ -34,16 +35,16 @@ export interface PriceLine {
   amount: number;
 }
 
+/** Configurazione iniziale: nessuna scelta preimpostata. */
 export function defaultConfig(c: Catalog): CakeConfig {
-  const covering = c.coverings[0];
   return {
-    shape: c.shapes[0].id,
-    size: c.sizes[1]?.id ?? c.sizes[0].id,
-    tiers: c.tiers[0].id,
-    sponge: c.sponges[0].id,
-    filling: c.fillings[0].id,
-    covering: covering.id,
-    coveringColor: covering.colors[0] ?? null,
+    shape: null,
+    size: null,
+    tiers: null,
+    sponge: null,
+    filling: null,
+    covering: null,
+    coveringColor: null,
     garnishes: [],
     topper: { type: "none", imageShape: "tonda", model: c.toppers.models[0].id, number: "18" },
     lettering: { text: "", color: c.lettering.colors[0] },
@@ -51,7 +52,19 @@ export function defaultConfig(c: Catalog): CakeConfig {
   };
 }
 
-const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) => x.id === id);
+/** Scelte obbligatorie ancora mancanti (etichette per l'utente). Vuoto = ordine completo. */
+export function missingChoices(cfg: CakeConfig): string[] {
+  const out: string[] = [];
+  if (!cfg.shape) out.push("forma");
+  if (!cfg.size) out.push("dimensione");
+  if (!cfg.tiers) out.push("piani");
+  if (!cfg.sponge) out.push("impasto");
+  if (!cfg.filling) out.push("farcitura");
+  if (!cfg.covering) out.push("copertura");
+  return out;
+}
+
+const find = <T extends { id: string }>(list: T[], id: string | null | undefined) => list.find((x) => x.id === id);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
@@ -60,13 +73,13 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  */
 export function normalizeConfig(c: Catalog, input: CakeConfig): CakeConfig {
   const d = defaultConfig(c);
-  const shape = find(c.shapes, input.shape) ?? c.shapes[0];
-  const size = find(c.sizes, input.size) ?? find(c.sizes, d.size)!;
-  let tier = find(c.tiers, input.tiers) ?? c.tiers[0];
-  if (tier.tiers > shape.maxTiers) tier = [...c.tiers].reverse().find((t) => t.tiers <= shape.maxTiers) ?? c.tiers[0];
-  const covering = find(c.coverings, input.covering) ?? c.coverings[0];
+  const shape = find(c.shapes, input.shape);
+  const size = find(c.sizes, input.size);
+  let tier = find(c.tiers, input.tiers);
+  if (tier && shape && tier.tiers > shape.maxTiers) tier = [...c.tiers].reverse().find((t) => t.tiers <= shape.maxTiers);
+  const covering = find(c.coverings, input.covering);
   const coveringColor =
-    covering.colors.length === 0
+    !covering || covering.colors.length === 0
       ? null
       : covering.colors.includes(input.coveringColor ?? "")
         ? input.coveringColor
@@ -86,12 +99,12 @@ export function normalizeConfig(c: Catalog, input: CakeConfig): CakeConfig {
     color: c.lettering.colors.includes(input.lettering?.color) ? input.lettering.color : c.lettering.colors[0],
   };
   return {
-    shape: shape.id,
-    size: size.id,
-    tiers: tier.id,
-    sponge: (find(c.sponges, input.sponge) ?? c.sponges[0]).id,
-    filling: (find(c.fillings, input.filling) ?? c.fillings[0]).id,
-    covering: covering.id,
+    shape: shape?.id ?? null,
+    size: size?.id ?? null,
+    tiers: tier?.id ?? null,
+    sponge: find(c.sponges, input.sponge)?.id ?? null,
+    filling: find(c.fillings, input.filling)?.id ?? null,
+    covering: covering?.id ?? null,
     coveringColor,
     garnishes,
     topper,
@@ -102,28 +115,33 @@ export function normalizeConfig(c: Catalog, input: CakeConfig): CakeConfig {
 
 /** Calcolo prezzo: stessa funzione lato client (preview) e server (prezzo definitivo). */
 export function computePrice(c: Catalog, cfg: CakeConfig): { lines: PriceLine[]; total: number } {
-  const shape = find(c.shapes, cfg.shape)!;
-  const size = find(c.sizes, cfg.size)!;
-  const tier = find(c.tiers, cfg.tiers)!;
-  const sponge = find(c.sponges, cfg.sponge)!;
-  const filling = find(c.fillings, cfg.filling)!;
-  const covering = find(c.coverings, cfg.covering)!;
+  const shape = find(c.shapes, cfg.shape);
+  const size = find(c.sizes, cfg.size);
+  const tier = find(c.tiers, cfg.tiers);
+  const sponge = find(c.sponges, cfg.sponge);
+  const filling = find(c.fillings, cfg.filling);
+  const covering = find(c.coverings, cfg.covering);
+  // Finché la taglia non è scelta i supplementi sono riferiti alla più piccola
+  const sizeFactor = size?.factor ?? 1;
   // Più piani = più superficie da farcire/coprire
-  const scale = size.factor * (1 + (tier.tiers - 1) * 0.45);
+  const scale = sizeFactor * (1 + ((tier?.tiers ?? 1) - 1) * 0.45);
 
   const lines: PriceLine[] = [];
   const add = (label: string, amount: number) => {
     if (amount > 0) lines.push({ label, amount: round2(amount) });
   };
 
-  add(`Base ${size.label.toLowerCase()} ${shape.label.toLowerCase()} (${size.servings})`, size.price * shape.factor);
-  add(tier.label, tier.price * size.factor);
-  add(sponge.label, sponge.price * scale);
-  add(filling.label, filling.price * scale);
-  add(covering.label, covering.price * scale);
+  if (size) {
+    const name = shape ? ` ${shape.label.toLowerCase()}` : "";
+    add(`Base ${size.label.toLowerCase()}${name} (${size.servings})`, size.price * (shape?.factor ?? 1));
+  }
+  if (tier) add(tier.label, tier.price * sizeFactor);
+  if (sponge) add(sponge.label, sponge.price * scale);
+  if (filling) add(filling.label, filling.price * scale);
+  if (covering) add(covering.label, covering.price * scale);
   for (const g of cfg.garnishes) {
     const opt = find(c.garnishes, g);
-    if (opt) add(opt.label, opt.price * size.factor);
+    if (opt) add(opt.label, opt.price * sizeFactor);
   }
   if (cfg.topper.type === "image") add(c.toppers.printedImage.label, c.toppers.printedImage.price);
   if (cfg.topper.type === "model") {
@@ -145,9 +163,9 @@ export function formatEuro(n: number) {
 
 /** Riepilogo testuale leggibile dal laboratorio */
 export function describeConfig(c: Catalog, cfg: CakeConfig): string[] {
-  const l = (list: { id: string; label: string }[], id: string) => find(list, id)?.label ?? id;
+  const l = (list: { id: string; label: string }[], id: string | null) => find(list, id)?.label ?? "—";
   const rows = [
-    `Forma: ${l(c.shapes, cfg.shape)} – ${l(c.sizes, cfg.size)} (${find(c.sizes, cfg.size)?.servings})`,
+    `Forma: ${l(c.shapes, cfg.shape)} – ${l(c.sizes, cfg.size)} (${find(c.sizes, cfg.size)?.servings ?? "—"})`,
     `Piani: ${l(c.tiers, cfg.tiers)}`,
     `Base: ${l(c.sponges, cfg.sponge)}`,
     `Farcitura: ${l(c.fillings, cfg.filling)}`,
