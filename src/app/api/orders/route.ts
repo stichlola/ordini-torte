@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getCatalog } from "@/lib/catalog-server";
+import { CatalogError, getCatalog } from "@/lib/catalog-server";
+import type { Catalog } from "@/lib/catalog";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { computePrice, describeConfig, minPickupDate, normalizeConfig, type CakeConfig, type Customer } from "@/lib/order";
 
@@ -28,7 +29,14 @@ export async function POST(request: Request) {
     return bad("Dati dell'ordine non validi.");
   }
 
-  const catalog = await getCatalog();
+  let catalog: Catalog;
+  try {
+    catalog = await getCatalog();
+  } catch (e) {
+    if (!(e instanceof CatalogError)) throw e;
+    console.error("Catalogo non disponibile:", e.message);
+    return bad("Catalogo non disponibile, riprova tra poco.", 503);
+  }
   // Il server non si fida del client: rinormalizza e ricalcola il prezzo
   const config = normalizeConfig(catalog, rawConfig);
   const price = computePrice(catalog, config);

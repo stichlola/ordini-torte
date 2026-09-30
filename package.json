@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "seed": "node --no-warnings scripts/gen-seed.mjs"
+    "lint": "eslint"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",

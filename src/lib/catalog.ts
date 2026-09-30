@@ -1,7 +1,5 @@
-// Catalogo delle opzioni disponibili.
-// È la fonte di default: se Supabase contiene la tabella `catalog_items`,
-// label/prezzi/attivazione vengono sovrascritti da lì (vedi lib/catalog-server.ts).
-// Nessun import con alias qui: il file è usato anche da scripts/gen-seed.ts.
+// Tipi e struttura del catalogo. I prezzi vivono solo su Supabase (`catalog_items`):
+// vedi lib/catalog-server.ts per il caricamento.
 
 export type ShapeId = "rotonda" | "quadrata" | "cuore" | "rettangolare";
 export type CoveringKind = "panna" | "pdz" | "buttercream" | "ganache" | "naked";
@@ -9,7 +7,7 @@ export type CoveringKind = "panna" | "pdz" | "buttercream" | "ganache" | "naked"
 export interface Option {
   id: string;
   label: string;
-  /** Prezzo in euro. Per le voci "scalabili" è riferito alla taglia base (fattore 1). */
+  /** Prezzo in euro, letto dal database. Per le voci "scalabili" è riferito alla taglia base (fattore 1). */
   price: number;
   description?: string;
   active?: boolean;
@@ -101,62 +99,73 @@ export const COLORS: ColorOption[] = [
 
 const PASTEL = ["bianco", "avorio", "rosa", "azzurro", "lilla", "menta", "giallo"];
 
-export const DEFAULT_CATALOG: Catalog = {
+/** Catalog senza i campi `price`: i prezzi esistono solo nel database. */
+export type NoPrice<T> = T extends (infer U)[]
+  ? NoPrice<U>[]
+  : T extends object
+    ? { [K in keyof T as K extends "price" ? never : K]: NoPrice<T[K]> }
+    : T;
+
+/**
+ * Struttura del catalogo: quali opzioni esistono e come vengono disegnate.
+ * Prezzi, etichette e disponibilità NON sono qui: arrivano da `catalog_items` su Supabase.
+ */
+export const CATALOG_TEMPLATE: NoPrice<Catalog> = {
   shapes: [
-    { id: "rotonda", label: "Rotonda", price: 0, factor: 1, maxTiers: 3 },
-    { id: "quadrata", label: "Quadrata", price: 0, factor: 1.1, maxTiers: 3 },
-    { id: "rettangolare", label: "Rettangolare", price: 0, factor: 1.2, maxTiers: 1 },
-    { id: "cuore", label: "Cuore", price: 0, factor: 1.15, maxTiers: 1 },
+    { id: "rotonda", label: "Rotonda", factor: 1, maxTiers: 3 },
+    { id: "quadrata", label: "Quadrata", factor: 1.1, maxTiers: 3 },
+    { id: "rettangolare", label: "Rettangolare", factor: 1.2, maxTiers: 1 },
+    { id: "cuore", label: "Cuore", factor: 1.15, maxTiers: 1 },
   ],
   sizes: [
-    { id: "s", label: "Piccola", servings: "6–8 porzioni", diameterCm: 18, price: 28, factor: 1 },
-    { id: "m", label: "Media", servings: "10–12 porzioni", diameterCm: 22, price: 40, factor: 1.4 },
-    { id: "l", label: "Grande", servings: "15–20 porzioni", diameterCm: 26, price: 58, factor: 1.9 },
-    { id: "xl", label: "Extra", servings: "25–30 porzioni", diameterCm: 30, price: 80, factor: 2.5 },
+    { id: "s", label: "Piccola", servings: "6–8 porzioni", diameterCm: 18, factor: 1 },
+    { id: "m", label: "Media", servings: "10–12 porzioni", diameterCm: 22, factor: 1.4 },
+    { id: "l", label: "Grande", servings: "15–20 porzioni", diameterCm: 26, factor: 1.9 },
+    { id: "xl", label: "Extra", servings: "25–30 porzioni", diameterCm: 30, factor: 2.5 },
   ],
   tiers: [
-    { id: "1", label: "1 piano", tiers: 1, price: 0, extraServings: "" },
-    { id: "2", label: "2 piani", tiers: 2, price: 35, extraServings: "+8 porzioni" },
-    { id: "3", label: "3 piani", tiers: 3, price: 75, extraServings: "+14 porzioni" },
+    { id: "1", label: "1 piano", tiers: 1, extraServings: "" },
+    { id: "2", label: "2 piani", tiers: 2, extraServings: "+8 porzioni" },
+    { id: "3", label: "3 piani", tiers: 3, extraServings: "+14 porzioni" },
   ],
   sponges: [
-    { id: "classico", label: "Pan di Spagna classico", price: 0, color: "#F2D59A" },
-    { id: "cacao", label: "Pan di Spagna al cacao", price: 2, color: "#7A4A2E" },
-    { id: "redvelvet", label: "Red velvet", price: 4, color: "#A8323E" },
-    { id: "carota", label: "Carota e mandorle", price: 3, color: "#D9A05B" },
+    { id: "classico", label: "Pan di Spagna classico", color: "#F2D59A" },
+    { id: "cacao", label: "Pan di Spagna al cacao", color: "#7A4A2E" },
+    { id: "redvelvet", label: "Red velvet", color: "#A8323E" },
+    { id: "carota", label: "Carota e mandorle", color: "#D9A05B" },
   ],
   fillings: [
-    { id: "pasticcera", label: "Crema pasticcera", price: 0, color: "#F7DF8B" },
-    { id: "chantilly", label: "Chantilly", price: 0, color: "#FBF1D6" },
-    { id: "cioccolato", label: "Crema al cioccolato", price: 2, color: "#5A3522" },
-    { id: "nocciola", label: "Crema alla nocciola", price: 3, color: "#8A5A3B" },
-    { id: "pistacchio", label: "Crema al pistacchio", price: 5, color: "#B8CC7A" },
-    { id: "frutti", label: "Chantilly e frutti di bosco", price: 4, color: "#C9587A" },
+    { id: "pasticcera", label: "Crema pasticcera", color: "#F7DF8B" },
+    { id: "chantilly", label: "Chantilly", color: "#FBF1D6" },
+    { id: "cioccolato", label: "Crema al cioccolato", color: "#5A3522" },
+    { id: "nocciola", label: "Crema alla nocciola", color: "#8A5A3B" },
+    { id: "pistacchio", label: "Crema al pistacchio", color: "#B8CC7A" },
+    { id: "frutti", label: "Chantilly e frutti di bosco", color: "#C9587A" },
   ],
   coverings: [
-    { id: "panna", label: "Panna montata", price: 0, kind: "panna", colors: ["bianco", "rosa", "azzurro", "giallo"] },
-    { id: "buttercream", label: "Buttercream", price: 6, kind: "buttercream", colors: PASTEL },
-    { id: "pdz", label: "Pasta di zucchero", price: 12, kind: "pdz", colors: COLORS.map((c) => c.id) },
-    { id: "ganache", label: "Ganache al cioccolato", price: 8, kind: "ganache", colors: [], fixedColor: "#4A2A1A" },
-    { id: "naked", label: "Naked cake (senza copertura)", price: 0, kind: "naked", colors: [] },
+    { id: "panna", label: "Panna montata", kind: "panna", colors: ["bianco", "rosa", "azzurro", "giallo"] },
+    { id: "buttercream", label: "Buttercream", kind: "buttercream", colors: PASTEL },
+    { id: "pdz", label: "Pasta di zucchero", kind: "pdz", colors: COLORS.map((c) => c.id) },
+    { id: "ganache", label: "Ganache al cioccolato", kind: "ganache", colors: [], fixedColor: "#4A2A1A" },
+    { id: "naked", label: "Naked cake (senza copertura)", kind: "naked", colors: [] },
   ],
   colors: COLORS,
   garnishes: [
-    { id: "frutta", label: "Frutta fresca", price: 6, render: "fruit" },
-    { id: "macarons", label: "Macarons", price: 9, render: "macaron" },
-    { id: "fiori", label: "Fiori eduli", price: 7, render: "flower" },
-    { id: "rosette", label: "Rosette di crema", price: 4, render: "rosette" },
-    { id: "meringhe", label: "Meringhette", price: 4, render: "meringue" },
-    { id: "perle", label: "Perline di zucchero", price: 3, render: "pearl" },
-    { id: "scaglie", label: "Scaglie di cioccolato", price: 3, render: "chips" },
-    { id: "drip", label: "Colata di cioccolato (drip)", price: 5, render: "drip" },
-    { id: "oro", label: "Foglia oro alimentare", price: 8, render: "gold" },
+    { id: "frutta", label: "Frutta fresca", render: "fruit" },
+    { id: "macarons", label: "Macarons", render: "macaron" },
+    { id: "fiori", label: "Fiori eduli", render: "flower" },
+    { id: "rosette", label: "Rosette di crema", render: "rosette" },
+    { id: "meringhe", label: "Meringhette", render: "meringue" },
+    { id: "perle", label: "Perline di zucchero", render: "pearl" },
+    { id: "scaglie", label: "Scaglie di cioccolato", render: "chips" },
+    { id: "drip", label: "Colata di cioccolato (drip)", render: "drip" },
+    { id: "oro", label: "Foglia oro alimentare", render: "gold" },
   ],
   toppers: {
     printedImage: {
       id: "cialda",
       label: "Immagine stampata (cialda)",
-      price: 12,
+     
       description: "Stampa alimentare della tua foto su cialda",
       shapes: [
         { id: "tonda", label: "Tonda" },
@@ -164,21 +173,21 @@ export const DEFAULT_CATALOG: Catalog = {
       ],
     },
     models: [
-      { id: "orsetto", label: "Orsetto", price: 18, emoji: "🧸" },
-      { id: "unicorno", label: "Unicorno", price: 22, emoji: "🦄" },
-      { id: "dinosauro", label: "Dinosauro", price: 22, emoji: "🦖" },
-      { id: "pallone", label: "Pallone da calcio", price: 15, emoji: "⚽" },
-      { id: "auto", label: "Macchinina", price: 20, emoji: "🚗" },
-      { id: "corona", label: "Corona", price: 16, emoji: "👑" },
-      { id: "sposi", label: "Sposi", price: 35, emoji: "💑" },
-      { id: "cuore", label: "Cuore", price: 12, emoji: "❤️" },
+      { id: "orsetto", label: "Orsetto", emoji: "🧸" },
+      { id: "unicorno", label: "Unicorno", emoji: "🦄" },
+      { id: "dinosauro", label: "Dinosauro", emoji: "🦖" },
+      { id: "pallone", label: "Pallone da calcio", emoji: "⚽" },
+      { id: "auto", label: "Macchinina", emoji: "🚗" },
+      { id: "corona", label: "Corona", emoji: "👑" },
+      { id: "sposi", label: "Sposi", emoji: "💑" },
+      { id: "cuore", label: "Cuore", emoji: "❤️" },
     ],
-    number: { id: "numero", label: "Numero 3D", price: 10, description: "Fino a 2 cifre" },
+    number: { id: "numero", label: "Numero 3D", description: "Fino a 2 cifre" },
   },
   lettering: {
     id: "scritta",
     label: "Scritta",
-    price: 3,
+   
     maxChars: 30,
     colors: ["bianco", "nero", "rosa", "azzurro"],
   },
@@ -190,11 +199,13 @@ export const DEFAULT_CATALOG: Catalog = {
   },
 };
 
-/** Tutte le voci con prezzo, identificate da "categoria:id" (usato per sync con il DB). */
-export function catalogEntries(c: Catalog): { key: string; category: string; item: Option }[] {
-  const out: { key: string; category: string; item: Option }[] = [];
-  const push = (category: string, items: Option[]) =>
-    items.forEach((item) => out.push({ key: `${category}:${item.id}`, category, item }));
+type Entry = { id: string; label: string; price?: number; active?: boolean };
+
+/** Tutte le voci con prezzo, identificate da "categoria:id" (chiave della riga in `catalog_items`). */
+export function catalogEntries(c: NoPrice<Catalog>): { key: string; item: Entry }[] {
+  const out: { key: string; item: Entry }[] = [];
+  const push = (category: string, items: Entry[]) =>
+    items.forEach((item) => out.push({ key: `${category}:${item.id}`, item }));
   push("shape", c.shapes);
   push("size", c.sizes);
   push("tier", c.tiers);

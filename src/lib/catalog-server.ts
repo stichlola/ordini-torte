@@ -1,5 +1,5 @@
 import "server-only";
-import { catalogEntries, DEFAULT_CATALOG, type Catalog } from "./catalog";
+import { catalogEntries, CATALOG_TEMPLATE, type Catalog } from "./catalog";
 import { getSupabaseAdmin } from "./supabase-server";
 
 interface CatalogRow {
@@ -10,37 +10,39 @@ interface CatalogRow {
   sort_order: number;
 }
 
+/** Il catalogo non può essere costruito: database non raggiungibile o dati mancanti. */
+export class CatalogError extends Error {}
+
 /**
- * Carica il catalogo: struttura e grafica vengono dal codice, mentre label, prezzi,
- * ordine e disponibilità possono essere gestiti dalla tabella `catalog_items`.
+ * Carica il catalogo da Supabase. Il codice definisce solo struttura e grafica;
+ * etichette, prezzi, ordine e disponibilità vengono da `catalog_items`.
+ * Non esistono valori di riserva: una voce senza riga nel database non viene proposta.
  */
 export async function getCatalog(): Promise<Catalog> {
-  const catalog: Catalog = structuredClone(DEFAULT_CATALOG);
   const supabase = getSupabaseAdmin();
-  if (!supabase) return catalog;
+  if (!supabase) throw new CatalogError("Variabili d'ambiente Supabase mancanti.");
 
   const { data, error } = await supabase
     .from("catalog_items")
     .select("key,label,price,active,sort_order");
-  if (error || !data) {
-    console.error("Catalogo Supabase non disponibile, uso i default:", error?.message);
-    return catalog;
-  }
+  if (error || !data) throw new CatalogError(`Lettura di catalog_items fallita: ${error?.message}`);
 
   const rows = new Map((data as CatalogRow[]).map((r) => [r.key, r]));
-  for (const { key, item } of catalogEntries(catalog)) {
+  const template = structuredClone(CATALOG_TEMPLATE);
+  for (const { key, item } of catalogEntries(template)) {
     const row = rows.get(key);
+    // senza riga (o riga disattivata) la voce è fuori catalogo
+    item.active = !!row?.active;
     if (!row) continue;
     item.label = row.label;
     item.price = Number(row.price);
-    item.active = row.active;
     (item as { sort?: number }).sort = row.sort_order;
   }
+  // da qui in poi ogni voce attiva ha il suo prezzo
+  const catalog = template as unknown as Catalog;
 
-  const keep = <T extends { active?: boolean; sort?: number }>(list: T[]) => {
-    const filtered = list.filter((x) => x.active !== false);
-    return (filtered.length ? filtered : list).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
-  };
+  const keep = <T extends { active?: boolean; sort?: number }>(list: T[]) =>
+    list.filter((x) => x.active).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
   catalog.shapes = keep(catalog.shapes);
   catalog.sizes = keep(catalog.sizes);
   catalog.tiers = keep(catalog.tiers);
@@ -49,5 +51,22 @@ export async function getCatalog(): Promise<Catalog> {
   catalog.coverings = keep(catalog.coverings);
   catalog.garnishes = keep(catalog.garnishes);
   catalog.toppers.models = keep(catalog.toppers.models);
+
+  // Il configuratore ha bisogno di almeno una voce per ogni scelta obbligatoria
+  const required: [string, { active?: boolean }[]][] = [
+    ["shape", catalog.shapes],
+    ["size", catalog.sizes],
+    ["tier", catalog.tiers],
+    ["sponge", catalog.sponges],
+    ["filling", catalog.fillings],
+    ["covering", catalog.coverings],
+    ["model", catalog.toppers.models],
+    ["topper:cialda", [catalog.toppers.printedImage]],
+    ["topper:numero", [catalog.toppers.number]],
+    ["lettering:scritta", [catalog.lettering]],
+  ];
+  const missing = required.filter(([, list]) => !list.some((x) => x.active)).map(([name]) => name);
+  if (missing.length) throw new CatalogError(`Voci mancanti o disattivate in catalog_items: ${missing.join(", ")}`);
+
   return catalog;
 }
