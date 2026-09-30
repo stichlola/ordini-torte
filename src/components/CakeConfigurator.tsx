@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Image from "next/image";
 import {
   AppBar,
   Box,
@@ -23,7 +24,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import CakeIcon from "@mui/icons-material/Cake";
 import CheckIcon from "@mui/icons-material/Check";
 import CropSquareIcon from "@mui/icons-material/CropSquare";
 import CircleOutlinedIcon from "@mui/icons-material/CircleOutlined";
@@ -412,7 +412,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
     <Box sx={{ minHeight: "100dvh", bgcolor: "background.default", pb: { xs: 14, md: 6 } }}>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ bgcolor: "background.default", borderBottom: 1, borderColor: "divider" }}>
         <Toolbar>
-          <CakeIcon sx={{ mr: 1.5, color: "secondary.main" }} />
+          <Image src="/logo.png" alt="Artigiana Fiume" width={44} height={44} priority style={{ marginRight: 12 }} />
           <Typography variant="h3" component="h1" sx={{ flexGrow: 1 }}>
             Componi la tua torta
           </Typography>
