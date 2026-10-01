@@ -34,8 +34,15 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import type { Catalog, ShapeId } from "@/lib/catalog";
 import { computePrice, defaultConfig, formatEuro, missingChoices, normalizeConfig, type CakeConfig } from "@/lib/order";
-import CakePreview from "./CakePreview";
+import dynamic from "next/dynamic";
+import ThreeSixtyIcon from "@mui/icons-material/ThreeSixty";
 import CheckoutDialog from "./CheckoutDialog";
+
+// three.js gira solo nel browser
+const Cake3D = dynamic(() => import("./Cake3D"), {
+  ssr: false,
+  loading: () => <Box sx={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "text.secondary", fontSize: 14 }}>Caricamento anteprima…</Box>,
+});
 
 const SHAPE_ICONS: Record<ShapeId, ReactNode> = {
   rotonda: <CircleOutlinedIcon fontSize="small" />,
@@ -106,16 +113,35 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
         bgcolor: "action.hover",
         borderRadius: "24px",
         overflow: "hidden",
-        "& svg": { height: { xs: "min(30dvh, 75vw)", md: "auto" }, width: { xs: "100%", md: "100%" }, mx: "auto" },
+        height: { xs: "min(34dvh, 80vw)", md: "auto" },
+        aspectRatio: { md: "1 / 1" },
+        cursor: "grab",
+        "&:active": { cursor: "grabbing" },
       }}
     >
-      <CakePreview catalog={catalog} config={config} imageUrl={image?.url} />
+      <Cake3D catalog={catalog} config={config} imageUrl={image?.url} />
       <Typography
         variant="caption"
-        sx={{ position: "absolute", top: 12, left: 12, bgcolor: "background.paper", borderRadius: "8px", px: 1.25, py: 0.5 }}
+        sx={{ position: "absolute", top: 12, left: 12, bgcolor: "background.paper", borderRadius: "8px", px: 1.25, py: 0.5, pointerEvents: "none" }}
       >
         Anteprima indicativa
       </Typography>
+      {config.shape ? (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ position: "absolute", bottom: 10, left: 0, right: 0, textAlign: "center", pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}
+        >
+          <ThreeSixtyIcon sx={{ fontSize: 16 }} /> Trascina per ruotare
+        </Typography>
+      ) : (
+        <Typography
+          color="text.secondary"
+          sx={{ position: "absolute", top: "30%", left: 0, right: 0, textAlign: "center", pointerEvents: "none" }}
+        >
+          Scegli la forma per iniziare
+        </Typography>
+      )}
     </Box>
   );
 
@@ -137,7 +163,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
   const sections = (
     <Stack spacing={2}>
       <Section title="Forma e dimensione" step={1}>
-        <OptionGrid cols={{ xs: 2, sm: 4 }}>
+        <OptionGrid cols={[4, 2]} min={130}>
           {catalog.shapes.map((s) => (
             <OptionTile
               key={s.id}
@@ -150,7 +176,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
           ))}
         </OptionGrid>
         <SubTitle>Dimensione</SubTitle>
-        <OptionGrid cols={{ xs: 2, sm: 4 }}>
+        <OptionGrid cols={[4, 2]} min={130}>
           {catalog.sizes.map((s) => (
             <OptionTile
               key={s.id}
@@ -163,7 +189,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
           ))}
         </OptionGrid>
         <SubTitle>Piani</SubTitle>
-        <OptionGrid cols={{ xs: 3 }}>
+        <OptionGrid cols={[3]} min={100}>
           {catalog.tiers.map((t) => (
             <OptionTile
               key={t.id}
@@ -180,7 +206,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
 
       <Section title="Impasto e farcitura" step={2}>
         <SubTitle first>Impasto</SubTitle>
-        <OptionGrid cols={{ xs: 2 }}>
+        <OptionGrid cols={[2, 1]} min={190}>
           {catalog.sponges.map((s) => (
             <OptionTile
               key={s.id}
@@ -193,7 +219,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
           ))}
         </OptionGrid>
         <SubTitle>Farcitura</SubTitle>
-        <OptionGrid cols={{ xs: 2, sm: 3 }}>
+        <OptionGrid cols={[3, 2]} min={170}>
           {catalog.fillings.map((f) => (
             <OptionTile
               key={f.id}
@@ -208,7 +234,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
       </Section>
 
       <Section title="Copertura" step={3}>
-        <OptionGrid cols={{ xs: 2, sm: 3 }}>
+        <OptionGrid cols={[3, 2]} min={170}>
           {catalog.coverings.map((c) => (
             <OptionTile
               key={c.id}
@@ -245,7 +271,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
         step={4}
         subtitle={`Scegline fino a ${catalog.rules.maxGarnishes} (${config.garnishes.length}/${catalog.rules.maxGarnishes})`}
       >
-        <OptionGrid cols={{ xs: 2, sm: 3 }}>
+        <OptionGrid cols={[3, 2]} min={165}>
           {catalog.garnishes.map((g) => {
             const selected = config.garnishes.includes(g.id);
             return (
@@ -268,7 +294,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
       </Section>
 
       <Section title="Decorazione sopra" step={5}>
-        <OptionGrid cols={{ xs: 2, sm: 4 }}>
+        <OptionGrid cols={[4, 2]} min={130}>
           {(
             [
               ["none", "Nessuna"],
@@ -289,7 +315,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
         <Collapse in={config.topper.type === "image"} unmountOnExit>
           <Box sx={{ mt: 2 }}>
             <SubTitle first>Formato cialda</SubTitle>
-            <OptionGrid cols={{ xs: 2 }}>
+            <OptionGrid cols={[2]} min={130}>
               {catalog.toppers.printedImage.shapes.map((s) => (
                 <OptionTile
                   key={s.id}
@@ -323,7 +349,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
 
         <Collapse in={config.topper.type === "model"} unmountOnExit>
           <Box sx={{ mt: 2 }}>
-            <OptionGrid cols={{ xs: 2, sm: 4 }}>
+            <OptionGrid cols={[4, 2]} min={140}>
               {catalog.toppers.models.map((m) => (
                 <OptionTile
                   key={m.id}
@@ -576,22 +602,25 @@ function SubTitle({ children, first }: { children: ReactNode; first?: boolean })
   );
 }
 
-type Cols = { xs: number; sm?: number };
-
-/** Griglia a colonne fisse: le opzioni restano allineate e non vanno a capo in modo casuale */
-function OptionGrid({ cols, children }: { cols: Cols; children: ReactNode }) {
+/**
+ * Griglia "tabellare": colonne di uguale larghezza, scelte tra `cols` (dalla più larga)
+ * in base allo spazio del contenitore, così ogni riquadro resta largo almeno `min` px
+ * e non restano righe spezzate tipo 3 + 1.
+ */
+function OptionGrid({ cols, min, children }: { cols: number[]; min: number; children: ReactNode }) {
+  const sorted = [...cols].sort((a, b) => a - b);
+  const gap = 8;
+  const queries = Object.fromEntries(
+    sorted.slice(1).map((c) => [
+      `@container (min-width: ${c * min + (c - 1) * gap}px)`,
+      { gridTemplateColumns: `repeat(${c}, minmax(0, 1fr))` },
+    ]),
+  );
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gap: 1,
-        gridTemplateColumns: {
-          xs: `repeat(${cols.xs}, minmax(0, 1fr))`,
-          sm: `repeat(${cols.sm ?? cols.xs}, minmax(0, 1fr))`,
-        },
-      }}
-    >
-      {children}
+    <Box sx={{ containerType: "inline-size" }}>
+      <Box sx={{ display: "grid", gap: `${gap}px`, gridTemplateColumns: `repeat(${sorted[0]}, minmax(0, 1fr))`, ...queries }}>
+        {children}
+      </Box>
     </Box>
   );
 }
