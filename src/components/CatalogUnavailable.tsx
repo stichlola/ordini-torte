@@ -1,11 +1,13 @@
 import { Box, Typography } from "@mui/material";
-import Image from "next/image";
+import Logo from "./Logo";
 
 export default function CatalogUnavailable() {
   return (
     <Box sx={{ minHeight: "100dvh", display: "grid", placeItems: "center", p: 3, textAlign: "center" }}>
       <Box sx={{ maxWidth: 420 }}>
-        <Image src="/logo.png" alt="Artigiana Fiume" width={96} height={96} priority style={{ marginBottom: 16 }} />
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+          <Logo variant="full" size={160} />
+        </Box>
         <Typography variant="h2" sx={{ mb: 1 }}>
           Ordini online non disponibili
         </Typography>

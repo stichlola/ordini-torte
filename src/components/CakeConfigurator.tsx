@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import Image from "next/image";
+import Logo from "./Logo";
 import {
   AppBar,
   Box,
   Button,
+  ButtonBase,
   Card,
   CardContent,
-  Chip,
   Collapse,
   Container,
   Divider,
@@ -16,8 +16,6 @@ import {
   Paper,
   Stack,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Toolbar,
   Tooltip,
   Typography,
@@ -139,9 +137,9 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
   const sections = (
     <Stack spacing={2}>
       <Section title="Forma e dimensione" step={1}>
-        <ChipGroup>
+        <OptionGrid cols={{ xs: 2, sm: 4 }}>
           {catalog.shapes.map((s) => (
-            <ChoiceChip
+            <OptionTile
               key={s.id}
               icon={SHAPE_ICONS[s.id]}
               label={s.label}
@@ -150,24 +148,24 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
               hint={s.maxTiers === 1 ? "solo 1 piano" : undefined}
             />
           ))}
-        </ChipGroup>
+        </OptionGrid>
         <SubTitle>Dimensione</SubTitle>
-        <ChipGroup>
+        <OptionGrid cols={{ xs: 2, sm: 4 }}>
           {catalog.sizes.map((s) => (
-            <ChoiceChip
+            <OptionTile
               key={s.id}
-              label={`${s.label} · Ø${s.diameterCm} cm`}
-              hint={s.servings}
+              label={s.label}
+              hint={[`Ø ${s.diameterCm} cm`, s.servings]}
               price={config.size === s.id ? undefined : deltaLabel(delta({ size: s.id }))}
               selected={config.size === s.id}
               onClick={() => update({ size: s.id })}
             />
           ))}
-        </ChipGroup>
+        </OptionGrid>
         <SubTitle>Piani</SubTitle>
-        <ChipGroup>
+        <OptionGrid cols={{ xs: 3 }}>
           {catalog.tiers.map((t) => (
-            <ChoiceChip
+            <OptionTile
               key={t.id}
               label={t.label}
               hint={t.extraServings || undefined}
@@ -177,14 +175,14 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
               onClick={() => update({ tiers: t.id })}
             />
           ))}
-        </ChipGroup>
+        </OptionGrid>
       </Section>
 
       <Section title="Impasto e farcitura" step={2}>
         <SubTitle first>Impasto</SubTitle>
-        <ChipGroup>
+        <OptionGrid cols={{ xs: 2 }}>
           {catalog.sponges.map((s) => (
-            <ChoiceChip
+            <OptionTile
               key={s.id}
               swatch={s.color}
               label={s.label}
@@ -193,11 +191,11 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
               onClick={() => update({ sponge: s.id })}
             />
           ))}
-        </ChipGroup>
+        </OptionGrid>
         <SubTitle>Farcitura</SubTitle>
-        <ChipGroup>
+        <OptionGrid cols={{ xs: 2, sm: 3 }}>
           {catalog.fillings.map((f) => (
-            <ChoiceChip
+            <OptionTile
               key={f.id}
               swatch={f.color}
               label={f.label}
@@ -206,13 +204,13 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
               onClick={() => update({ filling: f.id })}
             />
           ))}
-        </ChipGroup>
+        </OptionGrid>
       </Section>
 
       <Section title="Copertura" step={3}>
-        <ChipGroup>
+        <OptionGrid cols={{ xs: 2, sm: 3 }}>
           {catalog.coverings.map((c) => (
-            <ChoiceChip
+            <OptionTile
               key={c.id}
               label={c.label}
               price={config.covering === c.id ? undefined : deltaLabel(delta({ covering: c.id }))}
@@ -220,11 +218,11 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
               onClick={() => update({ covering: c.id })}
             />
           ))}
-        </ChipGroup>
+        </OptionGrid>
         {covering && covering.colors.length > 0 && (
           <>
             <SubTitle>Colore</SubTitle>
-            <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: "wrap" }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, 40px)", gap: 1.5 }}>
               {covering.colors.map((id) => {
                 const col = catalog.colors.find((c) => c.id === id)!;
                 return (
@@ -237,7 +235,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
                   />
                 );
               })}
-            </Stack>
+            </Box>
           </>
         )}
       </Section>
@@ -247,11 +245,11 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
         step={4}
         subtitle={`Scegline fino a ${catalog.rules.maxGarnishes} (${config.garnishes.length}/${catalog.rules.maxGarnishes})`}
       >
-        <ChipGroup>
+        <OptionGrid cols={{ xs: 2, sm: 3 }}>
           {catalog.garnishes.map((g) => {
             const selected = config.garnishes.includes(g.id);
             return (
-              <ChoiceChip
+              <OptionTile
                 key={g.id}
                 filter
                 label={g.label}
@@ -266,36 +264,41 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
               />
             );
           })}
-        </ChipGroup>
+        </OptionGrid>
       </Section>
 
       <Section title="Decorazione sopra" step={5}>
-        <ToggleButtonGroup
-          exclusive
-          color="primary"
-          value={config.topper.type}
-          onChange={(_, v) => v && update({ topper: { ...config.topper, type: v } })}
-          sx={{ flexWrap: "wrap", "& .MuiToggleButton-root": { borderRadius: "999px !important", border: 1, borderColor: "divider", m: 0.5 } }}
-        >
-          <ToggleButton value="none">Nessuna</ToggleButton>
-          <ToggleButton value="image">Foto stampata</ToggleButton>
-          <ToggleButton value="model">Modellino 3D</ToggleButton>
-          <ToggleButton value="number">Numero 3D</ToggleButton>
-        </ToggleButtonGroup>
+        <OptionGrid cols={{ xs: 2, sm: 4 }}>
+          {(
+            [
+              ["none", "Nessuna"],
+              ["image", "Foto stampata"],
+              ["model", "Modellino 3D"],
+              ["number", "Numero 3D"],
+            ] as const
+          ).map(([value, label]) => (
+            <OptionTile
+              key={value}
+              label={label}
+              selected={config.topper.type === value}
+              onClick={() => update({ topper: { ...config.topper, type: value } })}
+            />
+          ))}
+        </OptionGrid>
 
         <Collapse in={config.topper.type === "image"} unmountOnExit>
           <Box sx={{ mt: 2 }}>
             <SubTitle first>Formato cialda</SubTitle>
-            <ChipGroup>
+            <OptionGrid cols={{ xs: 2 }}>
               {catalog.toppers.printedImage.shapes.map((s) => (
-                <ChoiceChip
+                <OptionTile
                   key={s.id}
                   label={s.label}
                   selected={config.topper.imageShape === s.id}
                   onClick={() => update({ topper: { ...config.topper, imageShape: s.id } })}
                 />
               ))}
-            </ChipGroup>
+            </OptionGrid>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mt: 2 }}>
               <Button component="label" variant={image ? "outlined" : "contained"} startIcon={<PhotoCameraOutlinedIcon />}>
                 {image ? "Cambia foto" : "Carica foto"}
@@ -320,9 +323,9 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
 
         <Collapse in={config.topper.type === "model"} unmountOnExit>
           <Box sx={{ mt: 2 }}>
-            <ChipGroup>
+            <OptionGrid cols={{ xs: 2, sm: 4 }}>
               {catalog.toppers.models.map((m) => (
-                <ChoiceChip
+                <OptionTile
                   key={m.id}
                   icon={<span style={{ fontSize: 18, lineHeight: 1 }}>{m.emoji}</span>}
                   label={m.label}
@@ -331,7 +334,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
                   onClick={() => update({ topper: { ...config.topper, model: m.id } })}
                 />
               ))}
-            </ChipGroup>
+            </OptionGrid>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
               Modellini in pasta di zucchero realizzati a mano. Per colori o dettagli particolari usa le note.
             </Typography>
@@ -412,7 +415,9 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
     <Box sx={{ minHeight: "100dvh", bgcolor: "background.default", pb: { xs: 14, md: 6 } }}>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ bgcolor: "background.default", borderBottom: 1, borderColor: "divider" }}>
         <Toolbar>
-          <Image src="/logo.png" alt="Artigiana Fiume" width={44} height={44} priority style={{ marginRight: 12 }} />
+          <Box sx={{ mr: 1.5 }}>
+            <Logo size={40} />
+          </Box>
           <Typography variant="h3" component="h1" sx={{ flexGrow: 1 }}>
             Componi la tua torta
           </Typography>
@@ -571,17 +576,29 @@ function SubTitle({ children, first }: { children: ReactNode; first?: boolean })
   );
 }
 
-function ChipGroup({ children }: { children: ReactNode }) {
+type Cols = { xs: number; sm?: number };
+
+/** Griglia a colonne fisse: le opzioni restano allineate e non vanno a capo in modo casuale */
+function OptionGrid({ cols, children }: { cols: Cols; children: ReactNode }) {
   return (
-    <Stack direction="row" useFlexGap spacing={1} sx={{ flexWrap: "wrap" }}>
+    <Box
+      sx={{
+        display: "grid",
+        gap: 1,
+        gridTemplateColumns: {
+          xs: `repeat(${cols.xs}, minmax(0, 1fr))`,
+          sm: `repeat(${cols.sm ?? cols.xs}, minmax(0, 1fr))`,
+        },
+      }}
+    >
       {children}
-    </Stack>
+    </Box>
   );
 }
 
-function ChoiceChip(props: {
+function OptionTile(props: {
   label: string;
-  hint?: string;
+  hint?: string | string[];
   price?: string;
   selected: boolean;
   disabled?: boolean;
@@ -591,33 +608,69 @@ function ChoiceChip(props: {
   onClick: () => void;
 }) {
   const { label, hint, price, selected, disabled, filter, icon, swatch, onClick } = props;
-  const lead = selected && filter ? (
-    <CheckIcon fontSize="small" />
+  const lead = filter ? (
+    <Box
+      component="span"
+      sx={{
+        width: 18,
+        height: 18,
+        borderRadius: "5px",
+        border: 1.5,
+        borderColor: selected ? "secondary.main" : "text.secondary",
+        bgcolor: selected ? "secondary.main" : "transparent",
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      {selected && <CheckIcon sx={{ fontSize: 14, color: "primary.main" }} />}
+    </Box>
   ) : swatch ? (
-    <Box component="span" sx={{ width: 16, height: 16, borderRadius: "50%", bgcolor: swatch, border: 1, borderColor: "divider", ml: "6px !important" }} />
+    <Box component="span" sx={{ width: 18, height: 18, borderRadius: "50%", bgcolor: swatch, border: 1, borderColor: "divider" }} />
   ) : (
     icon
   );
   return (
-    <Chip
-      clickable
-      disabled={disabled}
+    <ButtonBase
       onClick={onClick}
-      icon={lead as React.ReactElement | undefined}
-      variant={selected ? "filled" : "outlined"}
-      color={selected ? "primary" : "default"}
+      disabled={disabled}
       aria-pressed={selected}
-      label={
-        <Box component="span" sx={{ display: "flex", flexDirection: "column", py: 0.25 }}>
-          <span>{label}</span>
-          {(hint || price) && (
-            <Box component="span" sx={{ fontSize: 12, opacity: 0.75 }}>
-              {[hint, price].filter(Boolean).join(" · ")}
-            </Box>
-          )}
-        </Box>
-      }
-    />
+      sx={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "flex-start",
+        gap: 1.25,
+        textAlign: "left",
+        minHeight: 52,
+        px: 1.5,
+        py: 1.25,
+        borderRadius: "14px",
+        border: 1,
+        borderColor: selected ? "primary.main" : "divider",
+        bgcolor: selected ? "primary.main" : "background.paper",
+        color: selected ? "primary.contrastText" : "text.primary",
+        opacity: disabled ? 0.4 : 1,
+        transition: "background-color .15s, border-color .15s",
+        "&:hover": { borderColor: "primary.main" },
+        "&.Mui-focusVisible": { outline: "2px solid", outlineColor: "secondary.main", outlineOffset: 2 },
+      }}
+    >
+      {lead && <Box sx={{ display: "flex", mt: "2px", flexShrink: 0 }}>{lead}</Box>}
+      <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <Typography component="span" sx={{ fontSize: "0.92rem", lineHeight: 1.3, fontWeight: 500 }}>
+          {label}
+        </Typography>
+        {[hint ?? []].flat().map((h) => (
+          <Typography key={h} component="span" sx={{ fontSize: "0.75rem", lineHeight: 1.35, opacity: 0.75 }}>
+            {h}
+          </Typography>
+        ))}
+        {price && (
+          <Typography component="span" sx={{ fontSize: "0.75rem", lineHeight: 1.35, color: selected ? "inherit" : "secondary.dark", fontWeight: 500 }}>
+            {price}
+          </Typography>
+        )}
+      </Box>
+    </ButtonBase>
   );
 }
 
