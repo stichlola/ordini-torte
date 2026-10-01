@@ -12,7 +12,7 @@ import { alongOutline, inside, perimeter, rng, shade, shapePolygon, type Pt } fr
 /*
  * Anteprima 3D "all'incirca" della torta (three.js via React Three Fiber).
  * Ogni piano è il contorno della forma estruso in verticale; decorazioni e topper
- * sono primitive semplici posizionate sul piano superiore. Si ruota trascinando.
+ * sono primitive semplici posizionate sul piano superiore. Si ruota trascinando, zoom con rotella o pizzico.
  */
 
 const NEUTRAL = "#DDD5C8"; // parti non ancora scelte
@@ -116,11 +116,11 @@ export default function Cake3D({ catalog, config, imageUrl }: Props) {
         makeDefault
         target={[0, Math.min(topY * 0.55, 0.9), 0]}
         enablePan={false}
-        enableZoom={false}
+        minDistance={1.6}
+        maxDistance={12}
+        zoomSpeed={0.6}
         minPolarAngle={0.25}
         maxPolarAngle={1.45}
-        autoRotate
-        autoRotateSpeed={0.7}
         enableDamping
       />
     </Canvas>

@@ -132,7 +132,7 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
           color="text.secondary"
           sx={{ position: "absolute", bottom: 10, left: 0, right: 0, textAlign: "center", pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}
         >
-          <ThreeSixtyIcon sx={{ fontSize: 16 }} /> Trascina per ruotare
+          <ThreeSixtyIcon sx={{ fontSize: 16 }} /> Trascina per ruotare · rotella o pizzico per lo zoom
         </Typography>
       ) : (
         <Typography
