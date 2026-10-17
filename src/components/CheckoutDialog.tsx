@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -30,11 +29,10 @@ interface Props {
   catalog: Catalog;
   config: CakeConfig;
   total: number;
-  image: Blob | null;
   fullScreen: boolean;
 }
 
-export default function CheckoutDialog({ open, onClose, onDone, catalog, config, total, image, fullScreen }: Props) {
+export default function CheckoutDialog({ open, onClose, onDone, catalog, config, total, fullScreen }: Props) {
   const minDate = useMemo(() => minPickupDate(catalog.rules.minLeadDays), [catalog.rules.minLeadDays]);
   const [customer, setCustomer] = useState<Customer>({
     name: "",
@@ -45,7 +43,6 @@ export default function CheckoutDialog({ open, onClose, onDone, catalog, config,
   });
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ code: string; total: number } | null>(null);
 
   const errors = {
@@ -61,21 +58,11 @@ export default function CheckoutDialog({ open, onClose, onDone, catalog, config,
     setTouched(true);
     if (!valid) return;
     setSending(true);
-    setError(null);
-    try {
-      const body = new FormData();
-      body.set("config", JSON.stringify(config));
-      body.set("customer", JSON.stringify(customer));
-      if (config.topper.type === "image" && image) body.set("image", image, "cialda.jpg");
-      const res = await fetch("/api/orders", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Errore nell'invio dell'ordine");
-      setResult({ code: data.code, total: data.total });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore imprevisto");
-    } finally {
-      setSending(false);
-    }
+    // Demo: nessun backend, l'ordine viene solo simulato
+    await new Promise((r) => setTimeout(r, 700));
+    const code = Math.random().toString(36).slice(2, 7).toUpperCase();
+    setResult({ code, total });
+    setSending(false);
   };
 
   const close = () => {
@@ -110,6 +97,9 @@ export default function CheckoutDialog({ open, onClose, onDone, catalog, config,
               <Typography>
                 Ritiro il <b>{formatDate(customer.pickupDate)}</b>, fascia <b>{customer.pickupSlot}</b> · Totale stimato{" "}
                 <b>{formatEuro(result.total)}</b>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Questa è una demo: nessun ordine è stato inviato.
               </Typography>
             </Stack>
           </DialogContent>
@@ -195,7 +185,6 @@ export default function CheckoutDialog({ open, onClose, onDone, catalog, config,
                   ))}
                 </TextField>
               </Stack>
-              {error && <Alert severity="error">{error}</Alert>}
               <Typography variant="caption" color="text.secondary">
                 Il prezzo è una stima: l&apos;ordine sarà confermato dalla pasticceria, che potrà contattarti per eventuali richieste nelle note.
               </Typography>

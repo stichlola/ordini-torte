@@ -543,7 +543,6 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
         catalog={catalog}
         config={config}
         total={price.total}
-        image={image?.blob ?? null}
         fullScreen={!isDesktop}
         onDone={() => {
           setConfig(defaultConfig(catalog));

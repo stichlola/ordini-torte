@@ -1,5 +1,5 @@
-// Tipi e struttura del catalogo. I prezzi vivono solo su Supabase (`catalog_items`):
-// vedi lib/catalog-server.ts per il caricamento.
+// Tipi e struttura del catalogo. Etichette e prezzi vengono dal listino d'esempio:
+// vedi lib/mock-catalog.ts.
 
 export type ShapeId = "rotonda" | "quadrata" | "cuore" | "rettangolare";
 export type CoveringKind = "panna" | "pdz" | "buttercream" | "ganache" | "naked";
