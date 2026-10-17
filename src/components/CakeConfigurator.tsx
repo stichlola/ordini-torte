@@ -444,9 +444,14 @@ export default function CakeConfigurator({ catalog }: { catalog: Catalog }) {
           <Box sx={{ mr: 1.5 }}>
             <Logo size={40} />
           </Box>
-          <Typography variant="h3" component="h1" sx={{ flexGrow: 1 }}>
-            Componi la tua torta
-          </Typography>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="overline" component="p" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+              La tua pasticceria · demo
+            </Typography>
+            <Typography variant="h3" component="h1">
+              Componi la tua torta
+            </Typography>
+          </Box>
           <Tooltip title="Ricomincia">
             <IconButton
               onClick={() => {

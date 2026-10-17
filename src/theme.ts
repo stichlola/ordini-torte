@@ -2,7 +2,7 @@
 
 import { createTheme } from "@mui/material/styles";
 
-// Stile ripreso da artigianafiume.com: crema, marrone scuro, oro; Playfair Display + Jost
+// Stile neutro da pasticceria: crema, marrone scuro, oro; Playfair Display + Jost
 const CREAM = "#F9F6F0";
 const SAND = "#F0EBE1";
 const BROWN = "#2B221C";
